@@ -1,0 +1,9 @@
+<?php require_once 'config.php';
+if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+$date = $_GET['date'] ?? date('Y-m-d'); $group_id = $_GET['group_id'] ?? 0;
+$groups = $pdo->query("SELECT id, name FROM groups")->fetchAll();
+$report_data = [];
+if ($group_id) { $stmt = $pdo->prepare("SELECT s.name as student_name, a.symbol, a.name as achievement_name FROM daily_achievements da JOIN students s ON da.student_id = s.id JOIN achievements a ON da.achievement_id = a.id WHERE s.group_id = ? AND da.date = ? ORDER BY s.name"); $stmt->execute([$group_id, $date]); $rows = $stmt->fetchAll(); foreach ($rows as $row) { $report_data[$row['student_name']][] = $row['symbol'] . ' ' . $row['achievement_name']; } } ?>
+<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>التقرير اليومي</title><link rel="stylesheet" href="style.css"></head>
+<body><div class="container"><div class="card"><h2>📆 التقرير اليومي - <?= $date ?></h2><div class="action-bar"><select onchange="window.location.href='?group_id='+this.value+'&date=<?= $date ?>'"><option value="">اختر المجموعة</option><?php foreach ($groups as $g): ?><option value="<?= $g['id'] ?>" <?= $group_id == $g['id'] ? 'selected' : '' ?>><?= htmlspecialchars($g['name']) ?></option><?php endforeach; ?></select><input type="date" value="<?= $date ?>" onchange="window.location.href='?group_id=<?= $group_id ?>&date='+this.value"></div>
+<?php if ($group_id && !empty($report_data)): ?><table class="data-table"><tr><th>الطالبة</th><th>الإنجازات</th></tr><?php foreach ($report_data as $student => $achievements): ?><tr><td><?= htmlspecialchars($student) ?></td><td><?= implode(' · ', $achievements) ?></td></tr><?php endforeach; ?></table><?php else: ?><div class="alert alert-error">لا توجد بيانات لهذا اليوم أو لم تختر مجموعة.</div><?php endif; ?><a href="dashboard.php" class="btn btn-outline">⬅️ العودة</a></div></div></body></html>
